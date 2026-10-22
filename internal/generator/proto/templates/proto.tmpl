@@ -1,0 +1,48 @@
+syntax = "proto3";
+
+package {{.PackageName}};
+{{- if .GoPackage}}
+
+option go_package = "{{.GoPackage}}";
+{{- end}}
+{{range .Messages}}
+
+message {{.Name}} {
+{{- range .NestedMessages}}
+  message {{.Name}} {
+{{- range .Fields}}
+    {{.Type}} {{.Name}} = {{.Number}};
+{{- end}}
+  }
+{{end}}
+{{- range .Fields}}
+  {{.Type}} {{.Name}} = {{.Number}};
+{{- end}}
+{{- range .Oneofs}}
+
+  oneof {{.Name}} {
+{{- range .Fields}}
+    {{.Type}} {{.Name}} = {{.Number}};
+{{- end}}
+  }
+{{- end}}
+}
+{{- end}}
+{{- if .EnvelopeMessages}}
+{{range .EnvelopeMessages}}
+
+message {{.Name}} {
+{{- range .Fields}}
+  {{.Type}} {{.Name}} = {{.Number}};
+{{- end}}
+{{- range .Oneofs}}
+
+  oneof {{.Name}} {
+{{- range .Fields}}
+    {{.Type}} {{.Name}} = {{.Number}};
+{{- end}}
+  }
+{{- end}}
+}
+{{- end}}
+{{- end}}

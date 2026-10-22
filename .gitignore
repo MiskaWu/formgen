@@ -1,0 +1,49 @@
+# Binaries for programs and plugins
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Test binary, built with `go test -c`
+*.test
+
+# Output of the go coverage tool
+*.out
+coverage
+coverage/
+coverage-report.txt
+
+# Built binary
+/formgen
+
+# Go workspace file
+go.work
+go.work.sum
+
+# IDE and Editor files
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# OS specific files
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Temporary files
+*.tmp
+*.temp
+*.log
+
+# Build artifacts
+bin/
+dist/
+build/
+
+# Claude Code local settings
+.claude/settings.local.json
+formgen.yaml

@@ -1,0 +1,212 @@
+version: "1"
+entities:
+    - name: Demo_Category
+      columns:
+        - name: Id
+          type: int32
+          isArray: false
+        - name: Icon
+          type: string
+          isArray: false
+        - name: Name
+          type: string
+          isArray: false
+        - name: Enabled
+          type: bool
+          isArray: false
+    - name: Demo_Mission
+      columns:
+        - name: Id
+          type: int32
+          isArray: false
+        - name: RegionId
+          type: int32
+          isArray: false
+          ref: Demo_Region
+          nestedColumns:
+            - name: Id
+              type: int32
+              isArray: false
+            - name: Difficulty
+              type: int32
+              isArray: false
+            - name: Order
+              type: int32
+              isArray: false
+            - name: NameText
+              type: int32
+              isArray: false
+            - name: DescText
+              type: int32
+              isArray: false
+            - name: MapAsset
+              type: string
+              isArray: false
+            - name: Tags
+              type: string
+              isArray: true
+            - name: Neighbors
+              type: int32
+              isArray: true
+        - name: NameText
+          type: int32
+          isArray: false
+        - name: Cost
+          type: int8
+          isArray: false
+        - name: Order
+          type: int32
+          isArray: false
+        - name: Drops
+          type: int32
+          isArray: false
+        - name: SuggestPower
+          type: int32
+          isArray: false
+        - name: SceneActor
+          type: string
+          isArray: false
+    - name: Demo_RankReward
+      columns:
+        - name: Id
+          type: int32
+          isArray: false
+        - name: GroupId
+          type: int32
+          isArray: false
+        - name: RankMax
+          type: int32
+          isArray: false
+        - name: RankMin
+          type: int32
+          isArray: false
+        - name: DescText
+          type: int32
+          isArray: false
+        - name: MailTemplate
+          type: int32
+          isArray: false
+        - name: Loot
+          type: LootStruct
+          isArray: true
+          isStruct: true
+          nestedColumns:
+            - name: Kind
+              type: int32
+              isArray: false
+            - name: ItemId
+              type: int32
+              isArray: false
+            - name: Amount
+              type: int32
+              isArray: false
+    - name: Demo_Region
+      columns:
+        - name: Id
+          type: int32
+          isArray: false
+        - name: Difficulty
+          type: int32
+          isArray: false
+        - name: Order
+          type: int32
+          isArray: false
+        - name: NameText
+          type: int32
+          isArray: false
+        - name: DescText
+          type: int32
+          isArray: false
+        - name: MapAsset
+          type: string
+          isArray: false
+        - name: Tags
+          type: string
+          isArray: true
+        - name: Neighbors
+          type: int32
+          isArray: true
+    - name: Demo_Shop
+      columns:
+        - name: Id
+          type: int32
+          isArray: false
+        - name: Label
+          type: int32
+          isArray: false
+          ref: Demo_ShopLabel
+          nestedColumns:
+            - name: Id
+              type: int32
+              isArray: false
+            - name: LabelText
+              type: int32
+              isArray: false
+            - name: LabelOrder
+              type: int32
+              isArray: false
+        - name: SortOrder
+          type: int32
+          isArray: false
+        - name: GoodsGroupId
+          type: int16
+          isArray: true
+          ref: Demo_ShopGoods.GroupId
+        - name: DisplayType
+          type: int16
+          isArray: false
+        - name: PickCount
+          type: int16
+          isArray: false
+        - name: NameText
+          type: int32
+          isArray: false
+    - name: Demo_ShopGoods
+      columns:
+        - name: Id
+          type: int32
+          isArray: false
+        - name: NameText
+          type: int32
+          isArray: false
+        - name: GroupId
+          type: int16
+          isArray: false
+        - name: RewardType
+          type: int32
+          isArray: false
+        - name: RewardId
+          type: int32
+          isArray: false
+        - name: Weight
+          type: int16
+          isArray: false
+        - name: Amount
+          type: int32
+          isArray: false
+        - name: PriceItem
+          type: int32
+          isArray: false
+        - name: Price
+          type: int32
+          isArray: false
+        - name: Discount
+          type: float32
+          isArray: false
+        - name: Icon
+          type: string
+          isArray: false
+        - name: PurchaseLimit
+          type: int32
+          isArray: false
+    - name: Demo_ShopLabel
+      columns:
+        - name: Id
+          type: int32
+          isArray: false
+        - name: LabelText
+          type: int32
+          isArray: false
+        - name: LabelOrder
+          type: int32
+          isArray: false

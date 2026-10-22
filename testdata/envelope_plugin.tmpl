@@ -1,0 +1,61 @@
+{{- /*
+  自訂 plugin 模板範例：formgen proto --plugin testdata/envelope_plugin.tmpl
+
+  可用的資料（proto.PluginData）：
+    .PackageName    proto package 名稱
+    .GoPackage      go_package 選項
+    .Messages       各表的 message（含結構陣列的巢狀 message）
+    .Wrappers       各表的 List wrapper（XxxList { repeated Xxx items = 1; }）
+    .PayloadFields  每個 List wrapper 對應的 oneof 欄位（名稱、型別、編號）
+
+  這個範例定義名為 Payload 的 envelope，搭配
+  formgen wrapper --envelope Payload 產生對應的 Go 包裝函數。
+*/ -}}
+syntax = "proto3";
+
+package {{.PackageName}};
+{{- if .GoPackage}}
+
+option go_package = "{{.GoPackage}}";
+{{- end}}
+{{range .Messages}}
+
+message {{.Name}} {
+{{- range .NestedMessages}}
+  message {{.Name}} {
+{{- range .Fields}}
+    {{.Type}} {{.Name}} = {{.Number}};
+{{- end}}
+  }
+{{end}}
+{{- range .Fields}}
+  {{.Type}} {{.Name}} = {{.Number}};
+{{- end}}
+}
+{{- end}}
+{{range .Wrappers}}
+
+message {{.Name}} {
+{{- range .Fields}}
+  {{.Type}} {{.Name}} = {{.Number}};
+{{- end}}
+}
+{{- end}}
+
+// Payload 用同一個型別承載任意一張表
+message Payload {
+  string key = 1;
+  string checksum = 2;
+
+  oneof payload {
+{{- range .PayloadFields}}
+    {{.Type}} {{.Name}} = {{.Number}};
+{{- end}}
+  }
+}
+
+// PayloadBatch 一次傳送多張表
+message PayloadBatch {
+  string version = 1;
+  repeated Payload items = 2;
+}

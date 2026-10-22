@@ -1,0 +1,6 @@
+CREATE TABLE {{.TableName}} (
+{{- range $index, $field := .Fields}}
+{{- if $index}},{{end}}
+    {{$field.Name}} {{$field.Type}}{{if $field.IsPrimaryKey}} PRIMARY KEY{{end}}{{if $field.NotNull}} NOT NULL{{end}}{{if $field.Comment}} COMMENT '{{$field.Comment}}'{{end}}
+{{- end}}
+);

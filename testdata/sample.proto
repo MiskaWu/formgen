@@ -1,0 +1,131 @@
+syntax = "proto3";
+
+package sample;
+
+option go_package = "example.com/sample/pb;pb";
+
+
+message DemoCategory {
+  int32 id = 1;
+  string icon = 2;
+  string name = 3;
+  bool enabled = 4;
+}
+
+message DemoCategoryList {
+  repeated DemoCategory items = 1;
+}
+
+message DemoMission {
+  int32 id = 1;
+  DemoRegion region_id = 2;
+  int32 name_text = 3;
+  int32 cost = 4;
+  int32 order = 5;
+  int32 drops = 6;
+  int32 suggest_power = 7;
+  string scene_actor = 8;
+}
+
+message DemoMissionList {
+  repeated DemoMission items = 1;
+}
+
+message DemoRankReward {
+  message LootStruct {
+    int32 kind = 1;
+    int32 item_id = 2;
+    int32 amount = 3;
+  }
+
+  int32 id = 1;
+  int32 group_id = 2;
+  int32 rank_max = 3;
+  int32 rank_min = 4;
+  int32 desc_text = 5;
+  int32 mail_template = 6;
+  repeated LootStruct loot = 7;
+}
+
+message DemoRankRewardList {
+  repeated DemoRankReward items = 1;
+}
+
+message DemoRegion {
+  int32 id = 1;
+  int32 difficulty = 2;
+  int32 order = 3;
+  int32 name_text = 4;
+  int32 desc_text = 5;
+  string map_asset = 6;
+  repeated string tags = 7;
+  repeated int32 neighbors = 8;
+}
+
+message DemoRegionList {
+  repeated DemoRegion items = 1;
+}
+
+message DemoShop {
+  int32 id = 1;
+  DemoShopLabel label = 2;
+  int32 sort_order = 3;
+  repeated DemoShopGoods goods_group_id = 4;
+  int32 display_type = 5;
+  int32 pick_count = 6;
+  int32 name_text = 7;
+}
+
+message DemoShopList {
+  repeated DemoShop items = 1;
+}
+
+message DemoShopGoods {
+  int32 id = 1;
+  int32 name_text = 2;
+  int32 group_id = 3;
+  int32 reward_type = 4;
+  int32 reward_id = 5;
+  int32 weight = 6;
+  int32 amount = 7;
+  int32 price_item = 8;
+  int32 price = 9;
+  float discount = 10;
+  string icon = 11;
+  int32 purchase_limit = 12;
+}
+
+message DemoShopGoodsList {
+  repeated DemoShopGoods items = 1;
+}
+
+message DemoShopLabel {
+  int32 id = 1;
+  int32 label_text = 2;
+  int32 label_order = 3;
+}
+
+message DemoShopLabelList {
+  repeated DemoShopLabel items = 1;
+}
+
+
+message TableEnvelope {
+  string key = 1;
+  string checksum = 2;
+
+  oneof payload {
+    DemoCategoryList demo_category_list = 10;
+    DemoMissionList demo_mission_list = 11;
+    DemoRankRewardList demo_rank_reward_list = 12;
+    DemoRegionList demo_region_list = 13;
+    DemoShopList demo_shop_list = 14;
+    DemoShopGoodsList demo_shop_goods_list = 15;
+    DemoShopLabelList demo_shop_label_list = 16;
+  }
+}
+
+message TableBundle {
+  string version = 1;
+  repeated TableEnvelope items = 2;
+}

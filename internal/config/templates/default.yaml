@@ -1,0 +1,70 @@
+# formgen 配置檔案
+#
+# 配置優先順序：環境變數 > 配置檔案
+#
+# 配置檔案搜尋路徑：
+#   1. --config 指定的路徑
+#   2. ./formgen.yaml (當前目錄)
+#   3. $HOME/formgen.yaml (使用者目錄)
+#   4. /etc/formgen/formgen.yaml (系統目錄)
+
+# 類型映射配置
+# 把 Excel「值域類型」列裡的寫法正規化成 YAML Schema 的標準類型。
+# 沒有列在這裡的類型會在 `formgen schema` 時報 unknown type。
+mappings:
+  custom:
+    # 整數類型
+    int8: int8
+    int16: int16
+    int: int32
+    int32: int32
+    int64: int64
+
+    # 無號整數類型
+    uint8: uint8
+    uint16: uint16
+    uint: uint32
+    uint32: uint32
+    uint64: uint64
+
+    # 浮點數類型
+    float: float32
+    float32: float32
+    float64: float64
+    double: float64
+
+    # 字符串和布爾
+    string: string
+    bool: bool
+    byte: bytes
+    bytes: bytes
+
+    # 時間類型
+    timestamp: timestamp
+    datetime: datetime
+    date: date
+    time: time
+
+    # 文字類型
+    text: text
+    json: json
+
+    # 其他
+    any: any
+    map: map
+
+    # 常見的表格別名（可依專案需求增刪）
+    tinyint: int8     # 小整數
+    shortint: int16   # 短整數
+    entry: int32      # 指向另一張表的 ID
+    tag: string       # 標籤字串
+    asset: string     # 資源路徑
+
+# 表頭版面（Excel 列號，第一列為 1；不填則使用以下預設值）
+# layout:
+#   nameRow: 2        # 欄位名稱
+#   typeRow: 3        # 值域類型（* 參考修飾符、[] 陣列修飾符）
+#   metaRow: 4        # metadata（ref:Table 或 ref:Table.Field）
+#   outputRow: 5      # 輸出類型（填 skipMarker 的欄位會被略過）
+#   dataRow: 6        # 第一筆資料
+#   skipMarker: skip
