@@ -127,6 +127,7 @@ func runImport(files []string) error {
 	}
 	opts := []importer.Option{
 		importer.WithLayout(layout),
+		importer.WithTypeMappings(config.GetCustomMappings()),
 		importer.WithBatchSize(importBatchSize),
 		importer.WithProgressCallback(func(table string, current, total int) {
 			fmt.Printf("  ⏳ 導入 %s: %d/%d (%.1f%%)\n",

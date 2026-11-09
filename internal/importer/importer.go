@@ -3,6 +3,7 @@ package importer
 import (
 	"fmt"
 
+	"github.com/miskawu/formgen/internal/mapper"
 	"github.com/miskawu/formgen/internal/models"
 	"github.com/miskawu/formgen/internal/serializer"
 	"github.com/miskawu/formgen/internal/source"
@@ -40,9 +41,10 @@ type Importer struct {
 	enableSnapshot   bool
 	namespace        string
 	importMode       ImportMode
-	embeddedEntities map[string]bool // 被嵌入的 Entity 名稱集合（這些不需要單獨寫入 DB）
-	keywordSuffix    string          // 關鍵字衝突時的後綴（預設為 "_field"）
-	layout           source.Layout   // 表頭版面（預設 source.DefaultLayout()）
+	embeddedEntities map[string]bool   // 被嵌入的 Entity 名稱集合（這些不需要單獨寫入 DB）
+	keywordSuffix    string            // 關鍵字衝突時的後綴（預設為 "_field"）
+	layout           source.Layout     // 表頭版面（預設 source.DefaultLayout()）
+	typeMapper       mapper.TypeMapper // 表頭類型的映射（別名 -> 標準化類型）
 
 	// 嵌入數據支援
 	entityIndex map[string]*entitySchema // Entity 名稱 -> schema（用於識別嵌入欄位）
@@ -58,6 +60,7 @@ func New(db *gorm.DB, excelPath string, opts ...Option) *Importer {
 		importMode:    ImportModeInsert, // 默認為 insert 模式
 		keywordSuffix: "_field",         // 與 SQL 生成器保持一致
 		layout:        source.DefaultLayout(),
+		typeMapper:    mapper.NewTypeMapper(nil),
 	}
 
 	for _, opt := range opts {

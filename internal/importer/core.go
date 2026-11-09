@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/miskawu/formgen/internal/models"
+	"github.com/miskawu/formgen/internal/source"
 	"github.com/miskawu/formgen/internal/strcase"
 
 	"github.com/google/uuid"
@@ -103,6 +104,8 @@ func (s *Importer) importSheet(tx *gorm.DB, sheet Sheet, tableName string) error
 	var validFieldNames []string
 	var protoFieldNames []string
 	var originalFieldNames []string
+	// validFieldConverters 存儲寫入資料庫前的轉換（nil 表示照字串寫入）
+	var validFieldConverters []cellConverter
 
 	// 結構陣列欄位映射: colIdx -> arrayFieldInfo
 	structFieldMap := make(map[int]arrayFieldInfo)
@@ -136,6 +139,7 @@ func (s *Importer) importSheet(tx *gorm.DB, sheet Sheet, tableName string) error
 		protoFieldNames = append(protoFieldNames, strcase.ToSnakeCase(fieldName))
 		// 原始欄位名用於查找 schema 中的嵌入資訊
 		originalFieldNames = append(originalFieldNames, fieldName)
+		validFieldConverters = append(validFieldConverters, s.dbConverterFor(source.Cell(rows, layout.TypeRow, colIdx)))
 	}
 
 	// 處理數據行
@@ -175,7 +179,15 @@ func (s *Importer) importSheet(tx *gorm.DB, sheet Sheet, tableName string) error
 			}
 
 			// DB 使用 snake_case 欄位名（可能有關鍵字後綴）
-			data[validFieldNames[i]] = cellValue
+			var dbValue any = cellValue
+			if convert := validFieldConverters[i]; convert != nil {
+				converted, err := convert(cellValue)
+				if err != nil {
+					return fmt.Errorf("row %d column %s: %w", rowIdx+layout.DataRow+1, originalFieldNames[i], err)
+				}
+				dbValue = converted
+			}
+			data[validFieldNames[i]] = dbValue
 			// Snapshot 使用 snake_case 欄位名（與 proto 生成器一致）
 			if snapshotData != nil {
 				// 檢查是否為引用欄位（嵌入引用或字段引用）

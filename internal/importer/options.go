@@ -1,6 +1,7 @@
 package importer
 
 import (
+	"github.com/miskawu/formgen/internal/mapper"
 	"github.com/miskawu/formgen/internal/schema"
 	"github.com/miskawu/formgen/internal/serializer"
 	"github.com/miskawu/formgen/internal/source"
@@ -114,6 +115,15 @@ func WithImportMode(mode ImportMode) Option {
 func WithKeywordSuffix(suffix string) Option {
 	return func(s *Importer) {
 		s.keywordSuffix = suffix
+	}
+}
+
+// WithTypeMappings 設定表頭類型的映射（通常從 config.GetCustomMappings() 取得），
+// 需與產生 schema 時使用的映射一致。匯入靠它認出別名實際上是什麼類型，
+// 例如設定檔寫了 flag: bool，類型列填 flag 的欄位就會當成 bool 寫入。
+func WithTypeMappings(mappings map[string]string) Option {
+	return func(s *Importer) {
+		s.typeMapper = mapper.NewTypeMapper(mappings)
 	}
 }
 
