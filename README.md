@@ -111,13 +111,11 @@ go build -o formgen .
 ```bash
 ./formgen db migrate load --file out/schema.sql --dir out/migrations
 ./formgen db migrate up --dir out/migrations --dsn "user:pass@tcp(127.0.0.1:3306)/demo"
-./formgen db import "testdata/Demo_[MRS]*.xlsx" \
+./formgen db import "testdata/Demo_*.xlsx" \
   --dsn "user:pass@tcp(127.0.0.1:3306)/demo?charset=utf8mb4&parseTime=True&loc=Local" \
   --mode upsert \
   --snapshot default --snapshot-proto out/schema.proto --snapshot-schema out/schema.yaml
 ```
-
-這裡先排除 `Demo_Category`：它的 `bool` 欄位目前匯入 MySQL 會失敗，原因見[已知限制](#已知限制)。
 
 ---
 
@@ -352,7 +350,6 @@ go test ./cmd -run TestGolden -update          # 修改生成器後更新 testda
 - GORM model 的欄位 tag 使用原始欄位名，SQL DDL 與 importer 使用 snake_case；兩者混用時需自行對齊命名策略。
 - 輸出類型列目前只區分 `skip` 與其他值。
 - `db import` 與 `db migrate` 目前只支援 MySQL。
-- `bool` 欄位目前是照字串寫進資料庫。Excel 填 `true`／`false` 時，MySQL 預設的 strict mode 會以 `Incorrect integer value: 'true'` 拒絕，整批匯入停下；範例表的 `Demo_Category` 就會碰到。
 
 ## In English
 
