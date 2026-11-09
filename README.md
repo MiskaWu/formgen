@@ -3,37 +3,81 @@
 [![Go Version](https://img.shields.io/badge/Go-1.25-blue.svg)](https://go.dev/)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
-> **formgen** is a schema-first code generation toolchain for spreadsheet-driven data.
-> It reads Excel sheets with a small header convention, resolves cross-sheet references,
-> writes a normalized YAML schema, and generates SQL DDL, GORM models, `.proto` files and
-> Go envelope helpers from it. It can also import the sheets into a database and store each
-> table as a gzip-compressed protobuf snapshot, compiled at runtime with `protocompile`
-> and populated through `dynamicpb` — no generated Go code required.
+把在 Excel 裡維護的資料表，產生成 SQL 建表語句、GORM model 和 Protocol Buffers 定義，也能把表格內容匯入 MySQL。
 
-formgen 是一套 Schema-First 的代碼生成工具鏈：以 Excel 表格作為資料定義的來源，先轉成一份保留細緻型別資訊的 YAML Schema，再由這份 Schema 產生 SQL DDL、GORM model、Protocol Buffers 定義與 Go 包裝函數；也能把表格資料匯入資料庫，並把每張表存成 protobuf 快照。
+適合資料由企劃、營運等非工程人員在試算表裡維護，程式端又需要多種格式的團隊：定義只有一份 Excel，資料庫、後端與客戶端的結構都從它產生，不用靠人手動對齊。
 
-適合「資料由非工程人員在試算表裡維護，程式端需要多種格式」的情境：同一份表格定義，資料庫、後端與客戶端各取所需，結構永遠一致。
+English summary: [In English](#in-english).
 
 ---
 
-## 架構
+## 用起來長這樣
 
-```text
-            Parser                     Transformer                      Generator
- ┌──────────────────────────┐  ┌───────────────────────────┐  ┌─────────────────────────────┐
- │ excel.Loader             │  │ resolver                  │  │ sql      → CREATE TABLE      │
- │   .xlsx → []Sheet        │→ │   ref: 參考 → 巢狀欄位     │→ │ orm      → GORM model        │
- │ source.Parser            │  │ yaml generator            │  │ proto    → .proto / plugin   │
- │   表頭 → schema.Entity   │  │   型別正規化 → YAML Schema │  │ wrapper  → envelope 包裝函數 │
- └──────────────────────────┘  └───────────────────────────┘  └─────────────────────────────┘
-                                          │
-                                          ▼
-                     importer（Excel → DB，可選 protobuf 快照）
+給一張 Excel 表。這是 repo 內附的 `testdata/Demo_Shop.xlsx`，第 1 列是給人看的名稱，第 2 到 5 列是欄位名稱、型別、參考、輸出類型，第 6 列起是資料（這裡只列第一筆）：
+
+| 商店Id | 開關 | 標籤 | 排序 | 商品群組 | 版型 | 抽選數量 | 名稱文字 | 名稱備註 |
+|---|---|---|---|---|---|---|---|---|
+| Id | __extra | Label | SortOrder | GoodsGroupId | DisplayType | PickCount | NameText | NameMemo |
+| entry | int | *entry | int | *[]shortint | shortint | shortint | *entry | string |
+| | cond:bool | ref:Demo_ShopLabel | | ref:Demo_ShopGoods.GroupId | | | ref:TextInfo | |
+| both | skip | both | client | both | both | both | client | skip |
+| 1 | 1 | 1 | 1 | 11 | 3 | | 7101 | 一般商店 |
+
+跑幾行指令：
+
+```bash
+./formgen schema testdata/Demo_*.xlsx -o out/schema.yaml    # 所有表合併成一份 YAML Schema
+./formgen sql   -i out/schema.yaml -o out/schema.sql
+./formgen orm   -i out/schema.yaml -o out/models.go --proto-path example.com/demo/pb
+./formgen proto -i out/schema.yaml -o out/schema.proto --envelope --go-package "example.com/demo/pb;pb"
 ```
 
-- **Parser**：`excel.Loader` 讀出工作表，`source.Parser` 依表頭版面解析出 `schema.Entity`（欄位名、型別、陣列、參考、結構陣列）。
-- **Transformer**：`resolver` 解析跨表參考，yaml generator 依設定檔把各種型別寫法正規化，輸出 YAML Schema。YAML Schema 是後續所有生成器的唯一來源。
-- **Generator**：每種輸出格式一個生成器，共用 `Generate([]schema.Entity) ([]byte, error)` 介面，各自用 Options 模式設定。
+得到這些輸出：
+
+```sql
+CREATE TABLE demo_shop (
+    id INT PRIMARY KEY NOT NULL,
+    label INT,
+    sort_order INT,
+    goods_group_id JSON COMMENT 'array field (stored as JSON)',
+    display_type SMALLINT,
+    pick_count SMALLINT,
+    name_text INT
+);
+```
+
+```go
+type DemoShop struct {
+	Id           int32   `gorm:"column:Id;primaryKey" json:"id"`
+	Label        int32   `gorm:"column:Label" json:"label"`
+	SortOrder    int32   `gorm:"column:SortOrder" json:"sort_order"`
+	GoodsGroupId []int16 `gorm:"column:GoodsGroupId;serializer:json" json:"goods_group_id"`
+	DisplayType  int16   `gorm:"column:DisplayType" json:"display_type"`
+	PickCount    int16   `gorm:"column:PickCount" json:"pick_count"`
+	NameText     int32   `gorm:"column:NameText" json:"name_text"`
+}
+```
+
+```protobuf
+message DemoShop {
+  int32 id = 1;
+  DemoShopLabel label = 2;
+  int32 sort_order = 3;
+  repeated DemoShopGoods goods_group_id = 4;
+  int32 display_type = 5;
+  int32 pick_count = 6;
+  int32 name_text = 7;
+}
+```
+
+對照表頭來看：
+
+- `開關`、`名稱備註` 的輸出類型填 `skip`，所以三份輸出裡都沒有這兩欄。
+- `Label` 參考 `Demo_ShopLabel`：SQL 和 Go 存 Id，proto 直接嵌入那張表的 message。
+- `GoodsGroupId` 是陣列：SQL 存 JSON、Go 是 slice、proto 是 `repeated`。
+- `NameText` 參考的 `TextInfo` 不在範例表裡，執行時會印一行警告，並退回一般整數欄位。
+
+<sub>以上是對 repo 內的範例表實際執行的結果，只截取 `Demo_Shop` 的部分，Go 的 `TableName()`、`ToProto()` 等方法與其他表省略。</sub>
 
 ---
 
@@ -60,18 +104,43 @@ go build -o formgen .
   --proto-path example.com/demo/pb --proto-alias pb
 ```
 
-產生結果可以和 `testdata/sample.*`（golden 檔）對照。
+產生結果可以和 `testdata/sample.*`（golden 檔）對照；`sample.go`、`sample.proto`、`sample_envelope.go` 的差別只有 package 路徑。
 
-匯入資料庫（MySQL）：
+匯入資料庫（MySQL，先建好空的 `demo` 資料庫）：
 
 ```bash
 ./formgen db migrate load --file out/schema.sql --dir out/migrations
 ./formgen db migrate up --dir out/migrations --dsn "user:pass@tcp(127.0.0.1:3306)/demo"
-./formgen db import "testdata/Demo_*.xlsx" \
+./formgen db import "testdata/Demo_[MRS]*.xlsx" \
   --dsn "user:pass@tcp(127.0.0.1:3306)/demo?charset=utf8mb4&parseTime=True&loc=Local" \
   --mode upsert \
   --snapshot default --snapshot-proto out/schema.proto --snapshot-schema out/schema.yaml
 ```
+
+這裡先排除 `Demo_Category`：它的 `bool` 欄位目前匯入 MySQL 會失敗，原因見[已知限制](#已知限制)。
+
+---
+
+## 架構
+
+formgen 是 Schema-First 的工具鏈：以 Excel 表格作為資料定義的來源，先轉成一份保留細緻型別資訊的 YAML Schema，再由這份 Schema 產生 SQL DDL、GORM model、Protocol Buffers 定義與 Go 包裝函數；也能把表格資料匯入資料庫，並把每張表存成 protobuf 快照。
+
+```text
+            Parser                     Transformer                      Generator
+ ┌──────────────────────────┐  ┌───────────────────────────┐  ┌─────────────────────────────┐
+ │ excel.Loader             │  │ resolver                  │  │ sql      → CREATE TABLE      │
+ │   .xlsx → []Sheet        │→ │   ref: 參考 → 巢狀欄位     │→ │ orm      → GORM model        │
+ │ source.Parser            │  │ yaml generator            │  │ proto    → .proto / plugin   │
+ │   表頭 → schema.Entity   │  │   型別正規化 → YAML Schema │  │ wrapper  → envelope 包裝函數 │
+ └──────────────────────────┘  └───────────────────────────┘  └─────────────────────────────┘
+                                          │
+                                          ▼
+                     importer（Excel → DB，可選 protobuf 快照）
+```
+
+- **Parser**：`excel.Loader` 讀出工作表，`source.Parser` 依表頭版面解析出 `schema.Entity`（欄位名、型別、陣列、參考、結構陣列）。
+- **Transformer**：`resolver` 解析跨表參考，yaml generator 依設定檔把各種型別寫法正規化，輸出 YAML Schema。YAML Schema 是後續所有生成器的唯一來源。
+- **Generator**：每種輸出格式一個生成器，共用 `Generate([]schema.Entity) ([]byte, error)` 介面，各自用 Options 模式設定。
 
 ---
 
@@ -283,6 +352,16 @@ go test ./cmd -run TestGolden -update          # 修改生成器後更新 testda
 - GORM model 的欄位 tag 使用原始欄位名，SQL DDL 與 importer 使用 snake_case；兩者混用時需自行對齊命名策略。
 - 輸出類型列目前只區分 `skip` 與其他值。
 - `db import` 與 `db migrate` 目前只支援 MySQL。
+- `bool` 欄位目前是照字串寫進資料庫。Excel 填 `true`／`false` 時，MySQL 預設的 strict mode 會以 `Incorrect integer value: 'true'` 拒絕，整批匯入停下；範例表的 `Demo_Category` 就會碰到。
+
+## In English
+
+> **formgen** is a schema-first code generation toolchain for spreadsheet-driven data.
+> It reads Excel sheets with a small header convention, resolves cross-sheet references,
+> writes a normalized YAML schema, and generates SQL DDL, GORM models, `.proto` files and
+> Go envelope helpers from it. It can also import the sheets into a database and store each
+> table as a gzip-compressed protobuf snapshot, compiled at runtime with `protocompile`
+> and populated through `dynamicpb` — no generated Go code required.
 
 ## License
 
